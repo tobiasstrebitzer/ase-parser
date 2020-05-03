@@ -1,160 +1,165 @@
-const zlib = require('zlib');
+const zlib = require('zlib')
 
 class Aseprite {
-  constructor(buffer, name) {
-    this._offset = 0;
-    this._buffer = buffer;
-    this.frames = [];
-    this.layers = [];
-    this.slices = [];
-    this.fileSize;
-    this.numFrames;
-    this.width;
-    this.height;
-    this.colorDepth;
-    this.paletteIndex;
-    this.numColors;
-    this.pixelRatio;
-    this.name = name;
-    this.tags = [];
+  constructor (buffer, name) {
+    this._offset = 0
+    this._buffer = buffer
+    this.frames = []
+    this.layers = []
+    this.slices = []
+    this.fileSize
+    this.numFrames
+    this.width
+    this.height
+    this.colorDepth
+    this.paletteIndex
+    this.numColors
+    this.pixelRatio
+    this.name = name
+    this.tags = []
+    this.lastObject = null
   }
   readNextByte() {
-    const nextByte = this._buffer.readUInt8(this._offset);
-    this._offset += 1;
-    return nextByte;
+    const nextByte = this._buffer.readUInt8(this._offset)
+    this._offset += 1
+    return nextByte
   }
   readByte(offset) {
-    return this._buffer.readUInt8(offset);
+    return this._buffer.readUInt8(offset)
   }
   readNextWord() {
-    const word = this._buffer.readUInt16LE(this._offset);
-    this._offset += 2;
-    return word;
+    const word = this._buffer.readUInt16LE(this._offset)
+    this._offset += 2
+    return word
   }
   readWord(offset) {
-    return this._buffer.readUInt16LE(offset);
+    return this._buffer.readUInt16LE(offset)
   }
   readNextShort() {
-    const short = this._buffer.readInt16LE(this._offset);
-    this._offset += 2;
-    return short;
+    const short = this._buffer.readInt16LE(this._offset)
+    this._offset += 2
+    return short
   }
   readShort(offset) {
-    return this._buffer.readInt16LE(offset);
+    return this._buffer.readInt16LE(offset)
   }
   readNextDWord() {
-    const dWord = this._buffer.readUInt32LE(this._offset);
-    this._offset += 4;
-    return dWord;
+    const dWord = this._buffer.readUInt32LE(this._offset)
+    this._offset += 4
+    return dWord
   }
   readDWord(offset) {
-    return this._buffer.readUInt32LE(offset);
+    return this._buffer.readUInt32LE(offset)
   }
   readNextLong() {
-    const long = this._buffer.readInt32LE(this._offset);
-    this._offset += 4;
-    return long;
+    const long = this._buffer.readInt32LE(this._offset)
+    this._offset += 4
+    return long
   }
   readLong(offset) {
-    return this._buffer.readInt32LE(offset);
+    return this._buffer.readInt32LE(offset)
   }
   readNextFixed() {
-    const fixed = this._buffer.readFloatLE(this._offset);
-    this._offset += 4;
-    return fixed;
+    const fixed = this._buffer.readFloatLE(this._offset)
+    this._offset += 4
+    return fixed
   }
   readFixed(offset) {
-    return this._buffer.readFloatLE(offset);
+    return this._buffer.readFloatLE(offset)
   }
   readNextBytes(numBytes) {
-    let strBuff = Buffer.alloc(numBytes);
+    let strBuff = Buffer.alloc(numBytes)
     for (let i = 0; i < numBytes; i++) {
-      strBuff.writeUInt8(this.readNextByte(), i);
+      strBuff.writeUInt8(this.readNextByte(), i)
     }
-    return strBuff.toString();
+    return strBuff.toString()
   }
   readNextRawBytes(numBytes) {
-    let buff = Buffer.alloc(numBytes);
+    let buff = Buffer.alloc(numBytes)
     for (let i = 0; i < numBytes; i++) {
-      buff.writeUInt8(this.readNextByte(), i);
+      buff.writeUInt8(this.readNextByte(), i)
     }
-    return buff;
+    return buff
   }
   //reads numBytes bytes of buffer b offset by offset bytes
   readRawBytes(numBytes, b, offset) {
-    let buff = Buffer.alloc(numBytes - offset);
+    let buff = Buffer.alloc(numBytes - offset)
     for (let i = 0; i < numBytes - offset; i++) {
-      buff.writeUInt8(b.readUInt8(offset + i), i);
+      buff.writeUInt8(b.readUInt8(offset + i), i)
     }
-    return buff;
+    return buff
   }
   readNextString() {
-    const numBytes = this.readNextWord();
-    return this.readNextBytes(numBytes);
+    const numBytes = this.readNextWord()
+    return this.readNextBytes(numBytes)
   }
   skipBytes(numBytes) {
-    this._offset += numBytes;
+    this._offset += numBytes
   }
   readHeader() {
-    this.fileSize = this.readNextDWord();
-    this.readNextWord();
-    this.numFrames = this.readNextWord();
-    this.width = this.readNextWord();
-    this.height = this.readNextWord();
-    this.colorDepth = this.readNextWord();
-    this.skipBytes(14);
-    this.paletteIndex = this.readNextByte();
-    this.skipBytes(3);
-    this.numColors = this.readNextWord();
-    const pixW = this.readNextByte();
-    const pixH = this.readNextByte();
-    this.pixelRatio = `${pixW}:${pixH}`;
-    this.skipBytes(92);
-    return this.numFrames;
+    this.fileSize = this.readNextDWord()
+    this.readNextWord()
+    this.numFrames = this.readNextWord()
+    this.width = this.readNextWord()
+    this.height = this.readNextWord()
+    this.colorDepth = this.readNextWord()
+    this.skipBytes(14)
+    this.paletteIndex = this.readNextByte()
+    this.skipBytes(3)
+    this.numColors = this.readNextWord()
+    const pixW = this.readNextByte()
+    const pixH = this.readNextByte()
+    this.pixelRatio = `${pixW}:${pixH}`
+    this.skipBytes(92)
+    return this.numFrames
   }
   readFrame() {
-    const bytesInFrame = this.readNextDWord();
-    this.skipBytes(2);
-    const oldChunk = this.readNextWord();
-    const frameDuration = this.readNextWord();
-    this.skipBytes(2);
-    const newChunk = this.readNextDWord();
-    let cels = [];
-    for(let i = 0; i < newChunk; i ++) {
-      let chunkData = this.readChunk();
-      switch(chunkData.type) {
+    const bytesInFrame = this.readNextDWord()
+    this.skipBytes(2)
+    const oldChunk = this.readNextWord()
+    const frameDuration = this.readNextWord()
+    this.skipBytes(2)
+    const newChunk = this.readNextDWord()
+    let cels = []
+    for (let i = 0; i < newChunk; i++) {
+      let chunkData = this.readChunk()
+      switch (chunkData.type) {
         case 0x0004:
         case 0x0011:
         case 0x2016:
         case 0x2017:
+          this.skipBytes(chunkData.chunkSize - 6)
+          break
         case 0x2020:
-          this.skipBytes(chunkData.chunkSize - 6);
-          break;
+          this.readUserDataChunk()
+          break
         case 0x2022:
-          this.readSliceChunk();
-          break;
+          this.readSliceChunk()
+          break
         case 0x2004:
-          this.readLayerChunk();
-          break;
+          this.readLayerChunk()
+          break
         case 0x2005:
-          let celData = this.readCelChunk(chunkData.chunkSize);
-          cels.push(celData);
-          break;
+          let celData = this.readCelChunk(chunkData.chunkSize)
+          cels.push(celData)
+          break
         case 0x2007:
-          this.readColorProfileChunk();
-          break;
+          this.readColorProfileChunk()
+          break
         case 0x2018:
-          this.readFrameTagsChunk();
-          break;
+          this.readFrameTagsChunk()
+          break
         case 0x2019:
-          this.palette = this.readPaletteChunk();
-          break;
+          this.palette = this.readPaletteChunk()
+          break
       }
     }
-    this.frames.push({ bytesInFrame,
+    this.frames.push({
+      bytesInFrame,
       frameDuration,
       numChunks: newChunk,
-      cels});
+      cels
+    })
   }
   readColorProfileChunk() {
     const types = [
@@ -162,16 +167,17 @@ class Aseprite {
       'sRGB',
       'ICC'
     ]
-    const typeInd = this.readNextWord();
-    const type = types[typeInd];
-    const flag = this.readNextWord();
-    const fGamma = this.readNextFixed();
-    this.skipBytes(8);
+    const typeInd = this.readNextWord()
+    const type = types[typeInd]
+    const flag = this.readNextWord()
+    const fGamma = this.readNextFixed()
+    this.skipBytes(8)
     //handle ICC profile data
     this.colorProfile = {
       type,
       flag,
-      fGamma};
+      fGamma
+    }
   }
   readFrameTagsChunk() {
     const loops = [
@@ -179,36 +185,36 @@ class Aseprite {
       'Reverse',
       'Ping-pong'
     ]
-    const numTags = this.readNextWord();
-    this.skipBytes(8);
-    for(let i = 0; i < numTags; i ++) {
-      let tag = {};
-      tag.from = this.readNextWord();
-      tag.to = this.readNextWord();
-      const loopsInd = this.readNextByte();
-      tag.animDirection = loops[loopsInd];
-      this.skipBytes(8);
-      tag.color = this.readNextRawBytes(3).toString('hex');
-      this.skipBytes(1);
-      tag.name = this.readNextString();
-      this.tags.push(tag);
+    const numTags = this.readNextWord()
+    this.skipBytes(8)
+    for (let i = 0; i < numTags; i++) {
+      let tag = {}
+      tag.from = this.readNextWord()
+      tag.to = this.readNextWord()
+      const loopsInd = this.readNextByte()
+      tag.animDirection = loops[loopsInd]
+      this.skipBytes(8)
+      tag.color = this.readNextRawBytes(3).toString('hex')
+      this.skipBytes(1)
+      tag.name = this.readNextString()
+      this.tags.push(tag)
     }
   }
   readPaletteChunk() {
-    const paletteSize = this.readNextDWord();
-    const firstColor = this.readNextDWord();
-    const secondColor = this.readNextDWord();
-    this.skipBytes(8);
-    let colors = [];
+    const paletteSize = this.readNextDWord()
+    const firstColor = this.readNextDWord()
+    const secondColor = this.readNextDWord()
+    this.skipBytes(8)
+    let colors = []
     for (let i = 0; i < paletteSize; i++) {
-      let flag = this.readNextWord();
-      let red = this.readNextByte();
-      let green = this.readNextByte();
-      let blue = this.readNextByte();
-      let alpha = this.readNextByte();
-      let name;
+      let flag = this.readNextWord()
+      let red = this.readNextByte()
+      let green = this.readNextByte()
+      let blue = this.readNextByte()
+      let alpha = this.readNextByte()
+      let name
       if (flag === 1) {
-        name = this.readNextString();
+        name = this.readNextString()
       }
       colors.push({
         red,
@@ -216,7 +222,7 @@ class Aseprite {
         blue,
         alpha,
         name: name !== undefined ? name : "none"
-      });
+      })
     }
     let palette = {
       paletteSize,
@@ -224,100 +230,109 @@ class Aseprite {
       lastColor: secondColor,
       colors
     }
-    this.colorDepth === 8 ? palette.index = this.paletteIndex : '';
-    return palette;
+    this.colorDepth === 8 ? palette.index = this.paletteIndex : ''
+    return palette
+  }
+  readUserDataChunk() {
+    const flags = this.readNextDWord()
+    const text = (flags & 1) !== 0 ? this.readNextString() : null
+    const color = (flags & 2) !== 0 ? this.readNextRawBytes(4).toString('hex') : null
+    if (this.lastObject) {
+      this.lastObject.userData = { text, color }
+    }
   }
   readSliceChunk() {
-    const numSliceKeys = this.readNextDWord();
-    const flags = this.readNextDWord();
+    const numSliceKeys = this.readNextDWord()
+    const flags = this.readNextDWord()
     const patch = (flags & 1) !== 0 ? {} : null
     const pivot = (flags & 2) !== 0 ? {} : null
-    this.skipBytes(4);
+    this.skipBytes(4)
     const name = this.readNextString()
     const keys = []
-    for(let i = 0; i < numSliceKeys; i ++) {
-      const frameNumber = this.readNextDWord();
-      const x = this.readNextLong();
-      const y = this.readNextLong();
-      const width = this.readNextDWord();
-      const height = this.readNextDWord();
+    for (let i = 0; i < numSliceKeys; i++) {
+      const frameNumber = this.readNextDWord()
+      const x = this.readNextLong()
+      const y = this.readNextLong()
+      const width = this.readNextDWord()
+      const height = this.readNextDWord()
       if (patch) {
-        patch.x = this.readNextLong();
-        patch.y = this.readNextLong();
-        patch.width = this.readNextDWord();
-        patch.height = this.readNextDWord();
+        patch.x = this.readNextLong()
+        patch.y = this.readNextLong()
+        patch.width = this.readNextDWord()
+        patch.height = this.readNextDWord()
       }
       if (pivot) {
-        pivot.x = this.readNextLong();
-        pivot.y = this.readNextLong();
+        pivot.x = this.readNextLong()
+        pivot.y = this.readNextLong()
       }
       keys.push({ frameNumber, x, y, width, height, patch, pivot })
     }
-    this.slices.push({ flags, name, keys });
+    const slice = { flags, name, keys }
+    this.lastObject = slice
+    this.slices.push(slice)
   }
   readLayerChunk() {
-    const flags = this.readNextWord();
-    const type = this.readNextWord();
-    const layerChildLevel = this.readNextWord();
-    this.skipBytes(4);
-    const blendMode = this.readNextWord();
-    const opacity = this.readNextByte();
-    this.skipBytes(3);
-    const name = this.readNextString();
-    this.layers.push({ flags,
-      type,
-      layerChildLevel,
-      blendMode,
-      opacity,
-      name});
+    const flags = this.readNextWord()
+    const type = this.readNextWord()
+    const layerChildLevel = this.readNextWord()
+    this.skipBytes(4)
+    const blendMode = this.readNextWord()
+    const opacity = this.readNextByte()
+    this.skipBytes(3)
+    const name = this.readNextString()
+    const layer = { flags, type, layerChildLevel, blendMode, opacity, name }
+    this.lastObject = layer
+    this.layers.push(layer)
   }
   //size of chunk in bytes for the WHOLE thing
   readCelChunk(chunkSize) {
-    const layerIndex = this.readNextWord();
-    const x = this.readNextShort();
-    const y = this.readNextShort();
-    const opacity = this.readNextByte();
-    const celType = this.readNextWord();
-    this.skipBytes(7);
-    const w = this.readNextWord();
-    const h = this.readNextWord();
-    const buff = this.readNextRawBytes(chunkSize - 26); //take the first 20 bytes off for the data above and chunk info
-    let rawCel;
-    if(celType === 2) {
-      rawCel = zlib.inflateSync(buff);
-    } else if(celType === 0) {
-      rawCel = buff;
+    const layerIndex = this.readNextWord()
+    const x = this.readNextShort()
+    const y = this.readNextShort()
+    const opacity = this.readNextByte()
+    const celType = this.readNextWord()
+    this.skipBytes(7)
+    const w = this.readNextWord()
+    const h = this.readNextWord()
+    const buff = this.readNextRawBytes(chunkSize - 26) //take the first 20 bytes off for the data above and chunk info
+    let rawCel
+    if (celType === 2) {
+      rawCel = zlib.inflateSync(buff)
+    } else if (celType === 0) {
+      rawCel = buff
     }
-    return { layerIndex,
+    return {
+      layerIndex,
       xpos: x,
       ypos: y,
       opacity,
       celType,
       w,
       h,
-      rawCelData: rawCel}
+      rawCelData: rawCel
+    }
   }
   readChunk() {
-    const cSize = this.readNextDWord();
-    const type = this.readNextWord();
-    return {chunkSize: cSize, type: type};
+    const cSize = this.readNextDWord()
+    const type = this.readNextWord()
+    return { chunkSize: cSize, type: type }
   }
   parse() {
-    const numFrames = this.readHeader();
-    for(let i = 0; i < numFrames; i ++) {
-      this.readFrame();
+    const numFrames = this.readHeader()
+    for (let i = 0; i < numFrames; i++) {
+      this.readFrame()
     }
-   
+
   }
-  formatBytes(bytes,decimals) {
+  formatBytes(bytes, decimals) {
     if (bytes === 0) {
-      return '0 Byte';
+      return '0 Byte'
     }
-    const k = 1024;
-    const dm = decimals + 1 || 3;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    const k = 1024
+    const dm = decimals + 1 || 3
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
   };
   toJSON() {
     return {
@@ -339,7 +354,8 @@ class Aseprite {
               h: cel.h,
               rawCelData: 'buffer'
             }
-          }) }
+          })
+        }
       }),
       palette: this.palette,
       width: this.width,
@@ -349,8 +365,8 @@ class Aseprite {
       pixelRatio: this.pixelRatio,
       layers: this.layers,
       slices: this.slices
-    };
+    }
   }
 }
 
-module.exports = Aseprite;
+module.exports = Aseprite

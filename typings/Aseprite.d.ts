@@ -66,6 +66,7 @@ declare namespace Aseprite {
     blendMode: number;
     opacity: number;
     name: string;
+    userData?: { text: string; color: string; };
   }
   export interface Slice {
     frameNumber: number;
@@ -82,7 +83,8 @@ declare namespace Aseprite {
     pivot?: {
       x: number;
       y: number;
-    }
+    };
+    userData?: { text: string; color: string; };
   }
   export interface Frame {
     bytesInFrame: number;
